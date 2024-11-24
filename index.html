@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>محرر تأثير التمويه مع خلفية متحركة</title>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            font-family: 'IBM Plex Sans', sans-serif;
+            background-color: #121212;
+            color: #ffffff;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .main-container {
+            display: flex;
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        .left-panel {
+            flex: 1;
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            background: rgba(40, 40, 40, 0.8);
+            border-left: 1px solid rgba(210, 35, 19, 0.762);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            z-index: 3;
+        }
+
+        .right-panel {
+            flex: 2;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            z-index: 3;
+        }
+
+        canvas#canvas {
+            max-width: 100%;
+            max-height: 100%;
+            border: 1px solid rgba(254, 30, 30, 0.035);
+            box-shadow: 0px 2px 65px rgba(0, 0, 0, 0.5);
+            cursor: auto;
+            z-index: auto;
+        }
+
+        canvas#backgroundCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            opacity: 0.77;
+        }
+
+        canvas#newsTickerCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        .slider-container {
+            margin: 20px 0;
+        }
+
+        .slider-container input[type="range"] {
+            width: 100%;
+            -webkit-appearance: none;
+            appearance: none;
+            background: #444;
+            height: 10px;
+            border-radius: 10px;
+            outline: none;
+            transition: background 0.3s;
+        }
+
+        .slider-container input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            background: #ffffff;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.6);
+        }
+
+        .buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .buttons button {
+            flex: 1;
+            padding: 10px 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: #ffffff;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.3s ease-in-out, transform 0.2s ease-in-out;
+        }
+
+        .buttons button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.05);
+        }
+
+        p {
+            text-align: center;
+            color: #fff;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <canvas id="backgroundCanvas"></canvas>
+        <canvas id="newsTickerCanvas"></canvas>
+        <div class="left-panel">
+            <h1>محرر تأثير التمويه</h1>
+            <p>قم بلصق صورة، تحميلها، أو اسحبها إلى هذه الصفحة لإضافتها.</p>
+            <input type="file" id="imageInput" accept="image/*" style="margin-top: 10px;">
+            <div class="slider-container">
+                <label for="blurSlider">مستوى التمويه:</label>
+                <input type="range" id="blurSlider" min="0" max="20" value="0">
+            </div>
+            <div class="buttons">
+                <button id="applyBlur">تطبيق التمويه</button>
+                <button id="copyImage">نسخ الصورة</button>
+            </div>
+        </div>
+        <div class="right-panel">
+            <canvas id="canvas"></canvas>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const blurSlider = document.getElementById('blurSlider');
+        const backgroundCanvas = document.getElementById('backgroundCanvas');
+        const bgCtx = backgroundCanvas.getContext('2d');
+        const newsTickerCanvas = document.getElementById('newsTickerCanvas');
+        const newsCtx = newsTickerCanvas.getContext('2d');
+
+        const PADDING = 100;
+        const BG_OPACITY = 0.77;
+
+        let uploadedImage = null;
+        let tickerImages = [];
+
+        // السحب والإفلات لتحميل الصور
+        document.body.addEventListener('dragover', (event) => {
+            event.preventDefault();
+        });
+
+        document.body.addEventListener('drop', (event) => {
+            event.preventDefault();
+            const file = event.dataTransfer.files[0];
+            if (file && file.type.startsWith('image')) {
+                const reader = new FileReader();
+                reader.onload = (e) => loadImage(e.target.result);
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // إعداد الأخبار المتحركة
+        function setupNewsTicker() {
+            newsTickerCanvas.width = window.innerWidth;
+            newsTickerCanvas.height = window.innerHeight;
+
+            // إذا لم يتم تحميل صورة، لا تقم بإنشاء الخلفية
+            if (!uploadedImage) return;
+
+            for (let i = 0; i < 5; i++) {
+                const width = uploadedImage.width / 4; // تصغير العرض
+                const height = uploadedImage.height / 4; // تصغير الارتفاع
+                tickerImages.push({
+                    x: Math.random() * newsTickerCanvas.width,
+                    y: Math.random() * newsTickerCanvas.height,
+                    width: width,
+                    height: height,
+                    speedX: Math.random() * 1 + 0.5,
+                    speedY: Math.random() * 0.5 + 0.2,
+                    opacity: 0,
+                    fadeIn: Math.random() > 0.5, // حالة الفيد
+                });
+            }
+
+            animateNewsTicker();
+        }
+
+        function animateNewsTicker() {
+            newsCtx.clearRect(0, 0, newsTickerCanvas.width, newsTickerCanvas.height);
+
+            tickerImages.forEach((img) => {
+                // حركة الصور
+                img.x += img.speedX;
+                img.y += img.speedY;
+
+                if (img.x > newsTickerCanvas.width) img.x = -img.width;
+                if (img.y > newsTickerCanvas.height) img.y = -img.height;
+
+                // تطبيق تأثير fade in / fade out
+                if (img.fadeIn) {
+                    img.opacity += 0.01;
+                    if (img.opacity >= 0.8) img.fadeIn = false;
+                } else {
+                    img.opacity -= 0.01;
+                    if (img.opacity <= 0.2) img.fadeIn = true;
+                }
+
+                // رسم الصورة بتأثير الأبيض والأسود
+                newsCtx.save();
+                newsCtx.globalAlpha = img.opacity;
+                newsCtx.filter = 'grayscale(100%)';
+                newsCtx.drawImage(uploadedImage, img.x, img.y, img.width, img.height);
+                newsCtx.restore();
+            });
+
+            requestAnimationFrame(animateNewsTicker);
+        }
+
+        // تحميل الصورة
+        const imageInput = document.getElementById('imageInput');
+        imageInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => loadImage(e.target.result);
+                reader.readAsDataURL(file);
+            }
+        });
+
+        document.addEventListener('paste', (event) => {
+            const items = event.clipboardData.items;
+            for (let item of items) {
+                if (item.type.startsWith('image')) {
+                    const blob = item.getAsFile();
+                    const reader = new FileReader();
+                    reader.onload = (e) => loadImage(e.target.result);
+                    reader.readAsDataURL(blob);
+                    break;
+                }
+            }
+        });
+
+        function loadImage(src) {
+            const img = new Image();
+            img.onload = () => {
+                canvas.width = img.width + 2 * PADDING;
+                canvas.height = img.height + 2 * PADDING;
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, PADDING, PADDING);
+
+                uploadedImage = img;
+                tickerImages = []; // إعادة تعيين الصور السابقة
+                setupNewsTicker(); // إعادة إعداد الخلفية
+            };
+            img.src = src;
+        }
+
+        blurSlider.addEventListener('input', () => {
+            if (!uploadedImage) return;
+            applyBlurEffect();
+        });
+
+        document.getElementById('applyBlur').addEventListener('click', () => {
+            if (!uploadedImage) {
+                alert("لم يتم تحميل أي صورة بعد!");
+                return;
+            }
+            applyBlurEffect();
+        });
+
+        function applyBlurEffect() {
+            const blurLevel = blurSlider.value * 4;
+            ctx.filter = `blur(${blurLevel}px)`;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(uploadedImage, PADDING, PADDING);
+            ctx.filter = 'none';
+        }
+
+        document.getElementById('copyImage').addEventListener('click', () => {
+            canvas.toBlob((blob) => {
+                const item = new ClipboardItem({ 'image/png': blob });
+                navigator.clipboard.write([item])
+                    .then(() => alert('تم نسخ الصورة بنجاح!'))
+                    .catch((err) => alert('فشل نسخ الصورة: ' + err));
+            });
+        });
+
+        window.addEventListener('resize', () => {
+            setupNewsTicker();
+        });
+    </script>
+</body>
+</html>
