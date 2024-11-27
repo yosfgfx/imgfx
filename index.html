@@ -27,7 +27,11 @@
         }
 
         .background-video {
+<<<<<<< HEAD
             position: fixed;
+=======
+            position: absolute;
+>>>>>>> 8f1fe74bcbb93e936e69f5d670d270827457a7d4
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
@@ -38,7 +42,10 @@
             object-fit: cover;
             opacity: 0;
             transition: opacity 0.5s ease-in-out;
+<<<<<<< HEAD
             will-change: transform;
+=======
+>>>>>>> 8f1fe74bcbb93e936e69f5d670d270827457a7d4
         }
 
         .background-overlay {
@@ -70,6 +77,10 @@
             max-height: 100vh;
             display: flex;
             flex-direction: column;
+<<<<<<< HEAD
+=======
+            z-index: 3;
+>>>>>>> 8f1fe74bcbb93e936e69f5d670d270827457a7d4
         }
 
         .right-panel {
@@ -268,6 +279,7 @@
         .preset-controls {
             display: flex;
             gap: 10px;
+<<<<<<< HEAD
             margin-top: 10px;
         }
 
@@ -342,6 +354,75 @@
         .layer-item.dragging {
             opacity: 0.5;
             background: rgba(255, 255, 255, 0.2);
+=======
+            margin-top: auto;
+            padding: 20px 0;
+        }
+
+        .buttons button {
+            flex: 1;
+            padding: 10px 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: #ffffff;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.3s ease-in-out, transform 0.2s ease-in-out;
+        }
+
+        .buttons button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.05);
+        }
+
+        p {
+            text-align: center;
+            color: #fff;
+            margin-top: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .main-container {
+                flex-direction: column;
+            }
+
+            .left-panel {
+                padding: 15px;
+                max-height: 60vh;
+            }
+
+            .buttons {
+                position: fixed;
+                bottom: 20px;
+                left: 20px;
+                right: 20px;
+                padding: 0;
+                z-index: 4;
+            }
+
+            .buttons button {
+                padding: 15px;
+                font-size: 16px;
+            }
+        }
+
+        @media (orientation: portrait) {
+            #BGH {
+                opacity: 0;
+            }
+            #BGV {
+                opacity: 1;
+            }
+        }
+
+        @media (orientation: landscape) {
+            #BGH {
+                opacity: 1;
+            }
+            #BGV {
+                opacity: 0;
+            }
+>>>>>>> 8f1fe74bcbb93e936e69f5d670d270827457a7d4
         }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
